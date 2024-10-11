@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
-
+builder.Services.AddSingleton(RedisClientFactory.GetRedisClient());
 builder.Services.AddSingleton<MongoDBContext>(provider => new MongoDBContext(connectionString: "mongodb://localhost:27017", databaseName: "MongoDB", collectionName: "Collection"));
 
 var app = builder.Build();

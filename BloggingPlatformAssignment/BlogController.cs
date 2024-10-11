@@ -10,9 +10,10 @@ namespace BloggingPlatformAssignment;
 public class BlogController : Controller
 {
     private readonly MongoDBContext _dbContext;
-
-    public BlogController(MongoDBContext dbContext)
+    private readonly RedisClient _redisClient;
+    public BlogController(MongoDBContext dbContext, RedisClient redisClient)
     {
+        _redisClient = redisClient;
         _dbContext = dbContext;
     }
 
@@ -32,7 +33,7 @@ public class BlogController : Controller
         var result = _dbContext.Collection<Post>().Find(x => x.BlogId.Equals(blogId)).ToList();
         return Ok(result);
     }
-
+    
     [HttpGet("GetCommentsFromPost")]
     public IActionResult GetCommentsFromPost([FromQuery] Guid postId)
     {
@@ -55,5 +56,20 @@ public class BlogController : Controller
         newUser.Username = updateUser.Username;
         var result = _dbContext.Collection<User>().ReplaceOne(filter => filter.Id == updateUser.UserId, newUser);
         return Ok(result);
+    }
+
+    [HttpGet("CreatePost")]
+    public IActionResult CreatePost()
+    {
+        Post post = new Post();
+        _redisClient.AddCacheOfPostIds(post);
+        return Ok(post);
+    }
+
+    [HttpGet("GetList")]
+    public IActionResult GetList()
+    {
+        var returnObj = _redisClient.GetCachedPostIds().ToList();
+        return Ok(returnObj);
     }
 }
