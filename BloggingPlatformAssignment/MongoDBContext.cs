@@ -21,11 +21,7 @@ public class MongoDBContext
         _collectionName = collectionName;
         _connectionString = connectionString;
         _client = new MongoClient(_connectionString);
-        
-        
-        
     }
-    
     public IMongoCollection<T> Collection<T>()
     {
         return _client.GetDatabase(_databaseName).GetCollection<T>((typeof(T).Name));

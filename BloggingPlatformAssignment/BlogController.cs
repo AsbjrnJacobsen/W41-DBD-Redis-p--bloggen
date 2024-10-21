@@ -11,6 +11,7 @@ public class BlogController : Controller
 {
     private readonly MongoDBContext _dbContext;
     private readonly RedisClient _redisClient;
+
     public BlogController(MongoDBContext dbContext, RedisClient redisClient)
     {
         _redisClient = redisClient;
@@ -21,7 +22,6 @@ public class BlogController : Controller
     [HttpGet("blogs")]
     public IActionResult GetBlogs()
     {
-
         var result = _dbContext.Collection<Blog>().Find(_ => true).ToList();
 
         return Ok(result);
@@ -33,7 +33,7 @@ public class BlogController : Controller
         var result = _dbContext.Collection<Post>().Find(x => x.BlogId.Equals(blogId)).ToList();
         return Ok(result);
     }
-    
+
     [HttpGet("GetCommentsFromPost")]
     public IActionResult GetCommentsFromPost([FromQuery] Guid postId)
     {
@@ -44,7 +44,6 @@ public class BlogController : Controller
     [HttpPut("UpdatePost")]
     public IActionResult UpdatePost([FromBody] Post post)
     {
-        
         var result = _dbContext.Collection<Post>().ReplaceOne(filter => filter.Id == post.Id, post);
         return Ok(result);
     }
@@ -71,5 +70,28 @@ public class BlogController : Controller
     {
         var returnObj = _redisClient.GetCachedPostIds().ToList();
         return Ok(returnObj);
+    }
+
+    [HttpPost("CreateComment")]
+    public IActionResult CreateComment([FromBody] Comment comment)
+    {
+        var timeOfLastComment = _redisClient.CheckPostCreationTime(comment.UserId);
+        if (timeOfLastComment == null)
+        {
+            _dbContext.Collection<Comment>().InsertOne(comment);
+            _redisClient.CommentsToCache(comment.UserId, DateTime.Now);
+            return Ok(comment);
+        }
+        var subTract = DateTime.Now.Subtract(timeOfLastComment.Value);
+        
+        
+        if (subTract.TotalSeconds >= 5)
+        {
+            _dbContext.Collection<Comment>().InsertOne(comment);
+            _redisClient.CommentsToCache(comment.UserId, DateTime.Now);
+            return Ok(comment);
+        }
+
+        return BadRequest("Is this post Spam? You posted a comment too quick.");
     }
 }

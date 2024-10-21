@@ -1,4 +1,5 @@
 using BloggingPlatformAssignment.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 using StackExchange.Redis;
 
 namespace BloggingPlatformAssignment;
@@ -71,5 +72,23 @@ public class RedisClient
         var postIds = db.SetMembers("CachedPostByIds");
     
         return postIds.Select(id => id.ToString());
+    }
+
+    public DateTime? CheckPostCreationTime(Guid userId)
+    {
+        var db = GetDatabase();
+        var timeStamp = db.StringGet(userId.ToString());
+        if (!timeStamp.HasValue)
+        {
+            return null;
+        }
+        
+        return DateTime.Parse(timeStamp);
+    }
+
+    public void CommentsToCache(Guid userId, DateTime timeStamp)
+    {
+        var db = GetDatabase();
+        db.StringSet(userId.ToString(), timeStamp.ToString());
     }
 }
